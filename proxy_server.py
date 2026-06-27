@@ -7,6 +7,9 @@ import sqlite3
 import os
 from urllib.parse import urlparse, parse_qs
 
+import signal
+import sys
+
 API_BASE = "https://stockshub.app"
 DB_PATH = "/opt/stock-dashboard/stocks.db"
 
@@ -83,7 +86,12 @@ class CORSProxyHandler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(f.read())
             return
+        # Health check
+        if self.path == '/health':
+            self.send_json({"status": "ok", "stocks": self.get_stock_count()})
+            return
         
+        # 解析URL参数
         parsed = urlparse(self.path)
         path = parsed.path
         params = parse_qs(parsed.query)
@@ -151,11 +159,21 @@ class CORSProxyHandler(http.server.BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
     
+    def get_stock_count(self):
+        try:
+            conn = get_db()
+            c = conn.cursor()
+            c.execute("SELECT COUNT(*) FROM stocks")
+            return c.fetchone()[0]
+        except:
+            return 0
+    
     def log_message(self, format, *args):
         pass
 
 if __name__ == '__main__':
-    port = 80
+    port = int(os.environ.get('PORT', 80))
+    
     if os.path.exists(DB_PATH):
         conn = get_db()
         c = conn.cursor()
@@ -168,5 +186,15 @@ if __name__ == '__main__':
         print("Warning: Database not found. Run sync_stocks.py first.")
     
     server = http.server.HTTPServer(('0.0.0.0', port), CORSProxyHandler)
+    
+    def shutdown(sig, frame):
+        print("\nShutting down...")
+        server.shutdown()
+        sys.exit(0)
+    
+    signal.signal(signal.SIGTERM, shutdown)
+    signal.signal(signal.SIGINT, shutdown)
+    
     print(f"Server started on port {port}")
+    print(f"Health check: http://localhost:{port}/health")
     server.serve_forever()
