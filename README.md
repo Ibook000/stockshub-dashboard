@@ -203,6 +203,20 @@ AI 会自动：
 
 详见 [skill/stockshub-api.md](skill/stockshub-api.md)
 
+## 兼容性
+
+支持多种 AI Agent：
+
+| Agent | 配置文件 | 安装命令 |
+|-------|---------|---------|
+| Hermes | `skill/stockshub-api.md` | `cp skill/stockshub-api.md ~/.hermes/skills/stockshub-api/SKILL.md` |
+| Claude Code | `skill/CLAUDE.md` | `cp skill/CLAUDE.md ./CLAUDE.md` |
+| Codex | `skill/codex.md` | `cp skill/codex.md ./codex.md` |
+| Cursor | `skill/.cursorrules` | `cp skill/.cursorrules ./.cursorrules` |
+| OpenClaw | `skill/openclaw/` | `cp skill/openclaw/* ~/.openclaw/skills/` |
+
+所有格式都包含相同的 API 文档，只是格式不同。
+
 ## Tech Stack
 
 - **Frontend**: Vanilla HTML/CSS/JS (no framework)

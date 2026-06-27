@@ -1,0 +1,36 @@
+# StocksHub API Rules
+
+## Project
+A-share market dashboard with real-time data API.
+
+## API Base
+http://localhost (local proxy)
+
+## Key Endpoints
+
+### Market Data
+- GET /api/quote/{code} - Real-time quote (price, change, volume)
+- GET /api/search?q={query} - Search stocks by name/code/pinyin
+- GET /api/detail/{code} - Stock fundamentals (PE, PB, market cap)
+- GET /api/kline/{code} - K-line OHLCV data
+
+### Market Overview
+- GET /api/market-stats - Advance/decline counts, limit up/down
+- GET /api/market-sentiment - Sentiment score (0-100)
+- GET /api/market-leaders - Top gainers, losers, volume
+- GET /api/hot-sectors - Hot industries and concepts
+
+### Analysis
+- GET /api/strategies - List scan strategies
+- GET /api/strategy/{name} - Run strategy scan
+- GET /api/research/{code} - Stock research reports
+- GET /api/market-analysis - AI market analysis
+
+## Index Codes
+- sh000001 - 上证指数
+- 399001 - 深证成指
+- 399006 - 创业板指
+
+## Usage
+Always use http://localhost as base URL.
+Rate limit: ~10 req/s, cache 30s for quotes.
