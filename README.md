@@ -145,28 +145,61 @@ CMD ["python3", "proxy_server.py"]
 
 这个项目包含一个 Hermes Agent skill，让 AI 可以直接调用 API 获取数据。
 
+### 什么是 Skill
+
+Skill 是 Hermes Agent 的知识库文件，告诉 AI 如何使用特定工具或 API。安装后，AI 会自动识别相关问题并调用正确的 API。
+
 ### 安装 Skill
 
 ```bash
-# 复制 skill 到 Hermes 目录
-mkdir -p ~/.hermes/skills
+# 1. 创建 skill 目录
+mkdir -p ~/.hermes/skills/stockshub-api
+
+# 2. 复制 skill 文件
 cp skill/stockshub-api.md ~/.hermes/skills/stockshub-api/SKILL.md
+
+# 3. 验证安装
+hermes skills list | grep stockshub
 ```
 
-### 使用 Skill
+### 使用方式
 
-```bash
-# 在 Hermes Agent 中加载
-skill_view(name='stockshub-api')
+安装后，直接用自然语言提问即可：
 
-# 然后 AI 就可以用 curl 获取数据
-curl "http://localhost/api/quote/sh000001"
-curl "http://localhost/api/search?q=茅台"
 ```
+"上证指数今天多少？"
+"帮我查一下贵州茅台的PE"
+"今天涨停的股票有哪些？"
+"白酒板块的股票列表"
+"搜索名字带新能源的股票"
+```
+
+AI 会自动：
+1. 加载 stockshub-api skill
+2. 调用对应的 API
+3. 格式化返回结果
 
 ### 触发词
 
-股票、A股、行情、K线、涨跌、板块、研报、策略、大盘、指数
+以下关键词会自动触发 skill：
+
+- 市场类：大盘、指数、涨跌、涨停、跌停、情绪
+- 股票类：股票、A股、股价、行情、K线
+- 分析类：板块、行业、概念、策略、研报
+
+### API 端点
+
+| 端点 | 说明 | 示例 |
+|------|------|------|
+| `/api/search` | 搜索股票 | `?q=茅台` |
+| `/api/quote/{code}` | 实时行情 | `/quote/600519` |
+| `/api/detail/{code}` | 基本面 | `/detail/600519` |
+| `/api/kline/{code}` | K线数据 | `/kline/600519` |
+| `/api/market-stats` | 市场统计 | 涨跌家数 |
+| `/api/market-leaders` | 排行榜 | 涨幅榜/跌幅榜 |
+| `/api/hot-sectors` | 热门板块 | 行业/概念 |
+| `/api/strategies` | 策略列表 | 选股策略 |
+| `/api/research/{code}` | 研报摘要 | 个股研报 |
 
 详见 [skill/stockshub-api.md](skill/stockshub-api.md)
 
