@@ -1,0 +1,2137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StocksHub Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    :root {
+      --bg-primary: #1f1633;
+      --bg-deeper: #150f23;
+      --bg-card: rgba(31, 22, 51, 0.85);
+      --bg-glass: rgba(255, 255, 255, 0.08);
+      --bg-hover: rgba(255, 255, 255, 0.05);
+      --border-purple: #362d59;
+      --border-muted: #584674;
+      --text-primary: #ffffff;
+      --text-secondary: #e5e7eb;
+      --text-muted: #9ca3af;
+      --accent-purple: #6a5fc1;
+      --accent-muted: #79628c;
+      --accent-violet: #422082;
+      --accent-lime: #c2ef4e;
+      --accent-coral: #ffb287;
+      --accent-pink: #fa7faa;
+      --accent-red: #ff4757;
+      --accent-green: #2ed573;
+      --accent-amber: #ffa502;
+      --shadow-inset: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px inset;
+      --shadow-elevated: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px;
+      --shadow-hover: rgba(0, 0, 0, 0.18) 0px 0.5rem 1.5rem;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Rubik', system-ui, -apple-system, sans-serif;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      min-height: 100vh;
+      display: flex;
+      background-image: radial-gradient(ellipse at 20% 50%, rgba(106, 95, 193, 0.15) 0%, transparent 50%);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: var(--bg-deeper);
+      border-right: 1px solid var(--border-purple);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 100;
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar-brand {
+      padding: 20px 18px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      border-bottom: 1px solid var(--border-purple);
+      color: var(--accent-lime);
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+    }
+
+    .nav-section {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.25px;
+      color: var(--text-muted);
+      padding: 18px 12px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: rgba(106, 95, 193, 0.2);
+      color: var(--accent-purple);
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .nav-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 90;
+    }
+
+    .nav-overlay.show { display: block; }
+
+    /* Main */
+    .main {
+      flex: 1;
+      margin-left: 220px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(18px) saturate(180%);
+      background: rgba(31, 22, 51, 0.75);
+      border-bottom: 1px solid var(--border-purple);
+      padding: 0 28px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .menu-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border-purple);
+      border-radius: 8px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .header-title {
+      font-size: 16px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--bg-glass);
+      border: 1px solid var(--border-purple);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .badge-dot.live {
+      background: var(--accent-lime);
+      box-shadow: 0 0 8px rgba(194, 239, 78, 0.4);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--accent-muted);
+      border: 1px solid var(--border-muted);
+      border-radius: 13px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      box-shadow: var(--shadow-inset);
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      box-shadow: var(--shadow-hover);
+      background: var(--accent-purple);
+    }
+
+    .btn-secondary {
+      background: var(--bg-glass);
+      border-color: var(--border-purple);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .btn-lime {
+      background: var(--accent-lime);
+      color: var(--bg-primary);
+      border: none;
+    }
+
+    .btn-lime:hover {
+      background: #d4f572;
+    }
+
+    .btn-icon {
+      padding: 8px;
+      width: 36px;
+      height: 36px;
+      justify-content: center;
+    }
+
+    .btn-text { display: inline; }
+
+    .content {
+      padding: 24px 28px;
+      flex: 1;
+    }
+
+    /* Views */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-purple);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow-elevated);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-purple);
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      color: var(--text-muted);
+    }
+
+    .card-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 18px;
+      background: var(--accent-violet);
+      color: var(--text-primary);
+    }
+
+    .card-body {
+      padding: 18px 20px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .mb-18 { margin-bottom: 18px; }
+
+    /* Hero Stats */
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .hero-stat { min-width: 120px; }
+
+    .hero-stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 36px;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+
+    .hero-stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .hero-stat-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 18px;
+    }
+
+    /* Gauge */
+    .gauge-container {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 10px;
+    }
+
+    .gauge-bg {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(from 0.75turn, 
+        var(--accent-green) 0deg, 
+        var(--accent-amber) 120deg, 
+        var(--accent-red) 240deg,
+        transparent 240deg
+      );
+      mask: radial-gradient(circle at center, transparent 50%, black 51%);
+      -webkit-mask: radial-gradient(circle at center, transparent 50%, black 51%);
+      opacity: 0.5;
+    }
+
+    .gauge-inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gauge-score {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 28px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .gauge-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Stats Bar */
+    .stat-item { padding: 16px 18px; }
+
+    .stat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .stat-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      color: var(--text-muted);
+    }
+
+    .stat-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 22px;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+
+    .stat-bar {
+      height: 4px;
+      background: var(--border-purple);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .stat-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Sector List */
+    .sector-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 1px solid rgba(54, 45, 89, 0.5);
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+
+    .sector-row:last-child { border-bottom: none; }
+    .sector-row:hover { background: var(--bg-hover); margin: 0 -20px; padding: 11px 20px; border-radius: 8px; }
+
+    .sector-rank {
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--border-purple);
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .sector-rank.top3 {
+      background: var(--accent-violet);
+      color: var(--accent-lime);
+    }
+
+    .sector-info { flex: 1; margin-left: 12px; min-width: 0; }
+
+    .sector-name {
+      font-size: 14px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sector-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .sector-change {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 18px;
+      flex-shrink: 0;
+    }
+
+    .change-up { color: var(--accent-red); background: rgba(255, 71, 87, 0.15); }
+    .change-down { color: var(--accent-green); background: rgba(46, 213, 115, 0.15); }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-purple);
+      padding: 0 20px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      padding: 16px 18px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      color: var(--text-muted);
+      cursor: pointer;
+      position: relative;
+      transition: color 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .tab:hover { color: var(--text-secondary); }
+    .tab.active { color: var(--text-primary); }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-lime);
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Table */
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 500px;
+    }
+
+    .table th {
+      text-align: left;
+      padding: 12px 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .table td {
+      padding: 12px 20px;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(54, 45, 89, 0.3);
+      white-space: nowrap;
+    }
+
+    .table tbody tr {
+      transition: background 0.1s;
+      cursor: pointer;
+    }
+
+    .table tbody tr:hover {
+      background: var(--bg-hover);
+    }
+
+    .code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent-lime);
+      font-weight: 500;
+    }
+
+    .price { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+
+    .change { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 12px; }
+
+    .volume { font-family: 'JetBrains Mono', monospace; color: var(--text-muted); font-size: 12px; }
+
+    /* Favorite Button */
+    .fav-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-muted);
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+
+    .fav-btn:hover { color: var(--accent-amber); }
+    .fav-btn.active { color: var(--accent-amber); }
+
+    /* Search */
+    .search-wrapper { position: relative; }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: #ffffff;
+      border: 1px solid #cfcfdb;
+      border-radius: 6px;
+      transition: all 0.15s;
+      width: 200px;
+    }
+
+    .search-box:focus-within {
+      box-shadow: rgba(0, 0, 0, 0.15) 0px 2px 10px inset;
+    }
+
+    .search-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--bg-primary);
+      font-size: 13px;
+      font-family: inherit;
+      min-width: 0;
+    }
+
+    .search-input::placeholder { color: #9ca3af; }
+
+    .search-icon { color: #9ca3af; font-size: 13px; flex-shrink: 0; }
+
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--bg-deeper);
+      border: 1px solid var(--border-purple);
+      border-radius: 12px;
+      margin-top: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 200;
+      display: none;
+      box-shadow: var(--shadow-elevated);
+      min-width: 280px;
+    }
+
+    .search-results.show { display: block; }
+
+    .search-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.1s;
+      gap: 12px;
+    }
+
+    .search-item:hover { background: var(--bg-hover); }
+
+    .search-item-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .search-item-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent-lime);
+      flex-shrink: 0;
+    }
+
+    .search-item-name { 
+      font-size: 14px; 
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .search-item-exchange {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      color: var(--text-muted);
+      padding: 3px 8px;
+      background: var(--border-purple);
+      border-radius: 18px;
+      flex-shrink: 0;
+    }
+
+    /* Stock Detail */
+    .stock-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .stock-name { font-size: 28px; font-weight: 700; }
+
+    .stock-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .stock-price-box { text-align: right; }
+
+    .stock-current-price {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 36px;
+      font-weight: 500;
+    }
+
+    .stock-change-info {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      margin-top: 6px;
+    }
+
+    .stock-tags {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .stock-tag {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      padding: 4px 12px;
+      border-radius: 18px;
+      background: var(--border-purple);
+      color: var(--text-secondary);
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border-purple);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .detail-item {
+      padding: 16px 18px;
+      background: var(--bg-card);
+    }
+
+    .detail-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .detail-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .chart-container {
+      height: 350px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* Strategy */
+    .strategy-card {
+      padding: 18px 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-bottom: 1px solid rgba(54, 45, 89, 0.5);
+    }
+
+    .strategy-card:hover { background: var(--bg-hover); }
+
+    .strategy-name { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+
+    .strategy-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+
+    .strategy-meta {
+      display: flex;
+      gap: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+
+    .strategy-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 18px;
+    }
+
+    .strategy-badge.suggested {
+      background: var(--accent-lime);
+      color: var(--bg-primary);
+    }
+
+    /* Report */
+    .report-item {
+      padding: 18px 20px;
+      border-bottom: 1px solid rgba(54, 45, 89, 0.5);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .report-item:hover { background: var(--bg-hover); }
+
+    .report-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+
+    .report-meta {
+      display: flex;
+      gap: 14px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+
+    .report-summary {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 10px;
+      line-height: 1.7;
+    }
+
+    .report-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .report-tag {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 18px;
+      background: var(--border-purple);
+      color: var(--text-muted);
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--accent-purple);
+      cursor: pointer;
+      margin-bottom: 18px;
+      padding: 4px 0;
+    }
+
+    .back-btn:hover { color: var(--accent-lime); }
+
+    /* Loading States */
+    .loading {
+      text-align: center;
+      padding: 48px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-purple);
+      border-top-color: var(--accent-lime);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .skeleton {
+      height: 16px;
+      background: linear-gradient(90deg, var(--border-purple) 25%, rgba(106, 95, 193, 0.3) 50%, var(--border-purple) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Error State */
+    .error-state {
+      text-align: center;
+      padding: 48px;
+    }
+
+    .error-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      color: var(--accent-red);
+    }
+
+    .error-msg {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    /* Refresh Timer */
+    .refresh-timer {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-purple); border-radius: 3px; }
+
+    .ai-content {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .menu-btn { display: flex; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .hero-stats { gap: 32px; }
+      .hero-stat-value { font-size: 32px; }
+      .detail-grid { grid-template-columns: repeat(2, 1fr); }
+      .content { padding: 20px; }
+      .header { padding: 0 20px; }
+    }
+
+    @media (max-width: 640px) {
+      .header-title { font-size: 14px; }
+      .badge { display: none; }
+      .btn-text { display: none; }
+      .btn { padding: 8px; min-width: 36px; justify-content: center; }
+      .search-box { width: 140px; }
+      .hero-stats { gap: 24px; }
+      .hero-stat-value { font-size: 28px; }
+      .hero-stat { min-width: 100px; }
+      .content { padding: 16px; }
+      .header { padding: 0 16px; height: 52px; }
+      .card-body { padding: 14px 16px; }
+      .card-header { padding: 14px 16px; }
+      .stock-header { flex-direction: column; }
+      .stock-price-box { text-align: left; }
+      .stock-current-price { font-size: 28px; }
+      .stock-name { font-size: 22px; }
+      .detail-grid { grid-template-columns: repeat(2, 1fr); }
+      .chart-container { height: 280px; }
+      .tab { padding: 14px 12px; font-size: 11px; }
+      .gauge-container { width: 80px; height: 80px; }
+      .gauge-score { font-size: 24px; }
+      .stat-value { font-size: 18px; }
+    }
+
+    @media (max-width: 400px) {
+      .hero-stats { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .hero-stat-value { font-size: 24px; }
+      .detail-grid { grid-template-columns: 1fr 1fr; }
+      .search-box { width: 120px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-overlay" id="navOverlay" onclick="closeNav()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">StocksHub</div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" data-view="market" onclick="switchView('market'); closeNav()">
+        <span class="nav-icon">M</span><span>Market</span>
+      </div>
+      
+      <div class="nav-section">Analysis</div>
+      <div class="nav-item" data-view="leaders" onclick="switchView('leaders'); closeNav()">
+        <span class="nav-icon">L</span><span>Leaders</span>
+      </div>
+      <div class="nav-item" data-view="sectors" onclick="switchView('sectors'); closeNav()">
+        <span class="nav-icon">S</span><span>Sectors</span>
+      </div>
+      <div class="nav-item" data-view="strategies" onclick="switchView('strategies'); closeNav()">
+        <span class="nav-icon">P</span><span>Strategies</span>
+      </div>
+      
+      <div class="nav-section">Research</div>
+      <div class="nav-item" data-view="reports" onclick="switchView('reports'); closeNav()">
+        <span class="nav-icon">R</span><span>Reports</span>
+      </div>
+      <div class="nav-item" data-view="ai" onclick="switchView('ai'); closeNav()">
+        <span class="nav-icon">A</span><span>AI Analysis</span>
+      </div>
+      
+      <div class="nav-section">Tools</div>
+      <div class="nav-item" data-view="favorites" onclick="switchView('favorites'); closeNav()">
+        <span class="nav-icon">F</span><span>Favorites</span>
+      </div>
+      <div class="nav-item" data-view="stock" onclick="switchView('stock'); closeNav()">
+        <span class="nav-icon">D</span><span>Stock Detail</span>
+      </div>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="header">
+      <div class="header-left">
+        <button class="menu-btn" onclick="openNav()">☰</button>
+        <div class="header-title" id="viewTitle">Market Overview</div>
+      </div>
+      <div class="header-right">
+        <div class="search-wrapper">
+          <div class="search-box">
+            <span class="search-icon">Q</span>
+            <input class="search-input" id="searchInput" placeholder="Search..." oninput="handleSearch(this.value)" onfocus="showSearchResults()" onblur="setTimeout(hideSearchResults, 200)">
+          </div>
+          <div class="search-results" id="searchResults"></div>
+        </div>
+        <div class="badge">
+          <div class="badge-dot" id="statusDot"></div>
+          <span id="marketStatusText">Loading...</span>
+        </div>
+        <span class="refresh-timer" id="refreshTimer"></span>
+        <button class="btn btn-icon" onclick="refreshCurrentView()" id="refreshBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/><polyline points="21 3 21 9 15 9"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- Market View -->
+      <div class="view active" id="view-market">
+        <!-- Index Cards -->
+        <div class="grid-3 mb-18" id="indexCards">
+          <div class="card">
+            <div class="stat-item">
+              <div class="stat-header">
+                <span class="stat-title">上证指数</span>
+                <span class="code" style="font-size: 10px;">SH000001</span>
+              </div>
+              <div class="stat-value" id="idx-sh" style="color: var(--text-primary)">--</div>
+              <div class="hero-stat-sub" id="idx-sh-chg" style="display: inline-block; font-size: 12px;">--</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="stat-item">
+              <div class="stat-header">
+                <span class="stat-title">深证成指</span>
+                <span class="code" style="font-size: 10px;">399001</span>
+              </div>
+              <div class="stat-value" id="idx-sz" style="color: var(--text-primary)">--</div>
+              <div class="hero-stat-sub" id="idx-sz-chg" style="display: inline-block; font-size: 12px;">--</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="stat-item">
+              <div class="stat-header">
+                <span class="stat-title">创业板指</span>
+                <span class="code" style="font-size: 10px;">399006</span>
+              </div>
+              <div class="stat-value" id="idx-cy" style="color: var(--text-primary)">--</div>
+              <div class="hero-stat-sub" id="idx-cy-chg" style="display: inline-block; font-size: 12px;">--</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-18">
+          <div class="card-body">
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hero-stat-value" id="upCount" style="color: var(--accent-red)">--</div>
+                <div class="hero-stat-label">
+                  Advancing
+                  <span class="hero-stat-sub" id="limitUpBadge" style="background: rgba(255, 71, 87, 0.15); color: var(--accent-red)">Limit --</span>
+                </div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-value" id="downCount" style="color: var(--accent-green)">--</div>
+                <div class="hero-stat-label">
+                  Declining
+                  <span class="hero-stat-sub" id="limitDownBadge" style="background: rgba(46, 213, 115, 0.15); color: var(--accent-green)">Limit --</span>
+                </div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-value" id="totalAmount" style="color: var(--accent-lime)">--</div>
+                <div class="hero-stat-label">Volume (B)</div>
+              </div>
+              <div style="margin-left: auto; text-align: center;">
+                <div class="gauge-container">
+                  <div class="gauge-bg"></div>
+                  <div class="gauge-inner">
+                    <div class="gauge-score" id="sentimentScore">--</div>
+                    <div class="gauge-label" id="sentimentLabel">--</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3 mb-18">
+          <div class="card">
+            <div class="stat-item">
+              <div class="stat-header">
+                <span class="stat-title">Advancing</span>
+                <div class="stat-dot" style="background: var(--accent-red)"></div>
+              </div>
+              <div class="stat-value" id="upCountBar" style="color: var(--accent-red)">--</div>
+              <div class="stat-bar"><div class="stat-bar-fill" id="upBar" style="width: 0%; background: var(--accent-red)"></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="stat-item">
+              <div class="stat-header">
+                <span class="stat-title">Unchanged</span>
+                <div class="stat-dot" style="background: var(--accent-amber)"></div>
+              </div>
+              <div class="stat-value" id="flatCountBar" style="color: var(--accent-amber)">--</div>
+              <div class="stat-bar"><div class="stat-bar-fill" id="flatBar" style="width: 0%; background: var(--accent-amber)"></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="stat-item">
+              <div class="stat-header">
+                <span class="stat-title">Declining</span>
+                <div class="stat-dot" style="background: var(--accent-green)"></div>
+              </div>
+              <div class="stat-value" id="downCountBar" style="color: var(--accent-green)">--</div>
+              <div class="stat-bar"><div class="stat-bar-fill" id="downBar" style="width: 0%; background: var(--accent-green)"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2 mb-18">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Top Industries</span>
+              <span class="card-badge">15</span>
+            </div>
+            <div class="card-body" id="industryList" style="max-height: 320px; overflow-y: auto;">
+              <div class="skeleton" style="width: 80%"></div>
+              <div class="skeleton" style="width: 60%"></div>
+              <div class="skeleton" style="width: 70%"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Top Concepts</span>
+              <span class="card-badge">15</span>
+            </div>
+            <div class="card-body" id="conceptList" style="max-height: 320px; overflow-y: auto;">
+              <div class="skeleton" style="width: 80%"></div>
+              <div class="skeleton" style="width: 60%"></div>
+              <div class="skeleton" style="width: 70%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leaders View -->
+      <div class="view" id="view-leaders">
+        <div class="card">
+          <div class="tabs">
+            <div class="tab active" data-tab="gainers" onclick="switchTab(this, 'leaders')">Gainers</div>
+            <div class="tab" data-tab="losers" onclick="switchTab(this, 'leaders')">Losers</div>
+            <div class="tab" data-tab="volume" onclick="switchTab(this, 'leaders')">Volume</div>
+            <div class="tab" data-tab="limitUp" onclick="switchTab(this, 'leaders')">Limit Up</div>
+            <div class="tab" data-tab="limitDown" onclick="switchTab(this, 'leaders')">Limit Down</div>
+          </div>
+          <div class="table-wrapper">
+            <div class="tab-panel active" id="leaders-gainers">
+              <table class="table">
+                <thead><tr><th></th><th>Code</th><th>Name</th><th>Price</th><th>Change</th><th>Amount</th></tr></thead>
+                <tbody id="gainersBody"></tbody>
+              </table>
+            </div>
+            <div class="tab-panel" id="leaders-losers">
+              <table class="table">
+                <thead><tr><th></th><th>Code</th><th>Name</th><th>Price</th><th>Change</th><th>Amount</th></tr></thead>
+                <tbody id="losersBody"></tbody>
+              </table>
+            </div>
+            <div class="tab-panel" id="leaders-volume">
+              <table class="table">
+                <thead><tr><th></th><th>Code</th><th>Name</th><th>Price</th><th>Change</th><th>Volume</th><th>Amount</th></tr></thead>
+                <tbody id="volumeBody"></tbody>
+              </table>
+            </div>
+            <div class="tab-panel" id="leaders-limitUp">
+              <table class="table">
+                <thead><tr><th></th><th>Code</th><th>Name</th><th>Price</th><th>Change</th><th>Amount</th></tr></thead>
+                <tbody id="limitUpBody"></tbody>
+              </table>
+            </div>
+            <div class="tab-panel" id="leaders-limitDown">
+              <table class="table">
+                <thead><tr><th></th><th>Code</th><th>Name</th><th>Price</th><th>Change</th><th>Amount</th></tr></thead>
+                <tbody id="limitDownBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sectors View -->
+      <div class="view" id="view-sectors">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Industries</span></div>
+            <div class="card-body" id="allIndustries" style="max-height: 600px; overflow-y: auto;"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Concepts</span></div>
+            <div class="card-body" id="allConcepts" style="max-height: 600px; overflow-y: auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strategies View -->
+      <div class="view" id="view-strategies">
+        <div class="card mb-18">
+          <div class="card-header"><span class="card-title">Strategy Patterns</span></div>
+          <div class="card-body" id="strategiesList" style="padding: 0;">
+            <div class="loading"><div class="loading-spinner"></div><br>Loading strategies...</div>
+          </div>
+        </div>
+        <div class="card" id="strategyResultsCard" style="display: none;">
+          <div class="card-header">
+            <span class="card-title" id="strategyResultsTitle">Scan Results</span>
+            <button class="btn btn-secondary" onclick="document.getElementById('strategyResultsCard').style.display='none'">Close</button>
+          </div>
+          <div class="card-body table-wrapper">
+            <table class="table">
+              <thead><tr><th></th><th>Code</th><th>Name</th><th>Date</th><th>Price</th><th>Change</th><th>Industry</th></tr></thead>
+              <tbody id="strategyResultsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports View -->
+      <div class="view" id="view-reports">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">External Research Reports</span>
+            <button class="btn btn-lime" onclick="pollReports()">Poll RSS</button>
+          </div>
+          <div class="card-body" id="reportsList" style="max-height: 600px; overflow-y: auto; padding: 0;">
+            <div class="loading"><div class="loading-spinner"></div><br>Loading reports...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Analysis View -->
+      <div class="view" id="view-ai">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">AI Market Analysis</span>
+            <span class="card-badge">GPT</span>
+          </div>
+          <div class="card-body">
+            <div class="ai-content" id="aiContent">
+              <div class="loading"><div class="loading-spinner"></div><br>Loading analysis...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Favorites View -->
+      <div class="view" id="view-favorites">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">My Favorites</span>
+            <span class="card-badge" id="favCount">0</span>
+          </div>
+          <div class="card-body table-wrapper">
+            <table class="table">
+              <thead><tr><th></th><th>Code</th><th>Name</th><th>Price</th><th>Change</th><th>Action</th></tr></thead>
+              <tbody id="favoritesBody"></tbody>
+            </table>
+            <div id="emptyFavorites" class="loading" style="display: none;">
+              No favorites yet. Click the star icon to add stocks.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stock Detail View -->
+      <div class="view" id="view-stock">
+        <div id="stockDetailContent">
+          <div class="loading">Search a stock to view details</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = '';
+    let currentView = 'market';
+    let searchTimeout = null;
+    let refreshInterval = null;
+    let refreshCountdown = 60;
+    let searchCache = {};
+    let dataCache = {};
+
+    // Favorites (localStorage)
+    function getFavorites() {
+      try {
+        return JSON.parse(localStorage.getItem('stock_favorites') || '[]');
+      } catch { return []; }
+    }
+
+    function saveFavorites(favs) {
+      localStorage.setItem('stock_favorites', JSON.stringify(favs));
+      updateFavCount();
+    }
+
+    function toggleFavorite(code, name) {
+      const favs = getFavorites();
+      const idx = favs.findIndex(f => f.code === code);
+      if (idx >= 0) {
+        favs.splice(idx, 1);
+      } else {
+        favs.push({ code, name, addedAt: Date.now() });
+      }
+      saveFavorites(favs);
+      updateFavButtons();
+      if (currentView === 'favorites') loadFavorites();
+    }
+
+    function isFavorite(code) {
+      return getFavorites().some(f => f.code === code);
+    }
+
+    function updateFavCount() {
+      const el = document.getElementById('favCount');
+      if (el) el.textContent = getFavorites().length;
+    }
+
+    function updateFavButtons() {
+      document.querySelectorAll('.fav-btn').forEach(btn => {
+        const code = btn.dataset.code;
+        btn.classList.toggle('active', isFavorite(code));
+        btn.textContent = isFavorite(code) ? '★' : '☆';
+      });
+    }
+
+    function favBtn(code, name) {
+      return `<button class="fav-btn ${isFavorite(code) ? 'active' : ''}" data-code="${code}" onclick="event.stopPropagation(); toggleFavorite('${code}', '${name}')">${isFavorite(code) ? '★' : '☆'}</button>`;
+    }
+
+    // Mobile nav
+    function openNav() {
+      document.getElementById('sidebar').classList.add('open');
+      document.getElementById('navOverlay').classList.add('show');
+    }
+
+    function closeNav() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('navOverlay').classList.remove('show');
+    }
+
+    // Format helpers
+    function fmtNum(n) {
+      if (n >= 1e8) return (n / 1e8).toFixed(2) + 'B';
+      if (n >= 1e4) return (n / 1e4).toFixed(2) + 'M';
+      return n?.toLocaleString() ?? '--';
+    }
+
+    function fmtAmt(n) {
+      if (n >= 1e8) return (n / 1e8).toFixed(0);
+      if (n >= 1e4) return (n / 1e4).toFixed(0);
+      return n?.toFixed(0) ?? '--';
+    }
+
+    function chgClass(v) { return v > 0 ? 'change-up' : 'change-down'; }
+    function chgColor(v) { return v > 0 ? 'var(--accent-red)' : 'var(--accent-green)'; }
+
+    // API wrapper with cache
+    async function apiFetch(endpoint, cacheKey, cacheTTL = 30000) {
+      // Check cache
+      if (dataCache[cacheKey] && Date.now() - dataCache[cacheKey].time < cacheTTL) {
+        return dataCache[cacheKey].data;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}${endpoint}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        dataCache[cacheKey] = { data, time: Date.now() };
+        return data;
+      } catch (e) {
+        console.error(`API error ${endpoint}:`, e);
+        throw e;
+      }
+    }
+
+    // Error handler
+    function showError(containerId, message, retryFn) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = `
+        <div class="error-state">
+          <div class="error-icon">!</div>
+          <div class="error-msg">${message}</div>
+          ${retryFn ? `<button class="btn btn-secondary" onclick="${retryFn}">Retry</button>` : ''}
+        </div>
+      `;
+    }
+
+    // View switching
+    function switchView(view) {
+      currentView = view;
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('view-' + view)?.classList.add('active');
+      document.querySelector(`.nav-item[data-view="${view}"]`)?.classList.add('active');
+      
+      const titles = {
+        market: 'Market Overview',
+        leaders: 'Market Leaders',
+        sectors: 'Sectors & Concepts',
+        strategies: 'Strategy Scanner',
+        reports: 'Research Reports',
+        ai: 'AI Analysis',
+        favorites: 'My Favorites',
+        stock: 'Stock Detail'
+      };
+      document.getElementById('viewTitle').textContent = titles[view] || view;
+      
+      if (view === 'leaders') loadLeaders();
+      if (view === 'sectors') loadAllSectors();
+      if (view === 'strategies') loadStrategies();
+      if (view === 'reports') loadReports();
+      if (view === 'ai') loadAI();
+      if (view === 'favorites') loadFavorites();
+    }
+
+    function refreshCurrentView() {
+      // Clear cache for current view
+      Object.keys(dataCache).forEach(key => {
+        if (key.startsWith(currentView) || key === 'market') {
+          delete dataCache[key];
+        }
+      });
+      switchView(currentView);
+      resetRefreshTimer();
+    }
+
+    function switchTab(el, group) {
+      const parent = el.closest('.card');
+      parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      parent.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById(group + '-' + el.dataset.tab)?.classList.add('active');
+    }
+
+    // Search with API
+    async function handleSearch(query) {
+      if (searchTimeout) clearTimeout(searchTimeout);
+      if (!query || query.length < 1) { hideSearchResults(); return; }
+
+      // Check cache
+      const cacheKey = `search_${query}`;
+      if (searchCache[cacheKey] && Date.now() - searchCache[cacheKey].time < 60000) {
+        renderSearchResults(searchCache[cacheKey].data);
+        return;
+      }
+
+      searchTimeout = setTimeout(async () => {
+        try {
+          const data = await apiFetch(`/api/search?q=${encodeURIComponent(query)}`, cacheKey, 60000);
+          searchCache[cacheKey] = { data, time: Date.now() };
+          renderSearchResults(data);
+        } catch (e) {
+          console.error('Search error:', e);
+          document.getElementById('searchResults').innerHTML = 
+            '<div class="search-item"><span style="color: var(--accent-red)">Search failed</span></div>';
+          showSearchResults();
+        }
+      }, 300);
+    }
+
+    function renderSearchResults(results) {
+      const container = document.getElementById('searchResults');
+      if (!results || results.length === 0) {
+        container.innerHTML = '<div class="search-item"><span style="color: var(--text-muted)">No results</span></div>';
+      } else {
+        container.innerHTML = results.slice(0, 10).map(s => `
+          <div class="search-item" onmousedown="selectStock('${s.code}')">
+            <div class="search-item-left">
+              <span class="search-item-code">${s.code}</span>
+              <span class="search-item-name">${s.name}</span>
+            </div>
+            <span class="search-item-exchange">${s.exchange}</span>
+          </div>
+        `).join('');
+      }
+      showSearchResults();
+    }
+
+    function showSearchResults() { document.getElementById('searchResults').classList.add('show'); }
+    function hideSearchResults() { document.getElementById('searchResults').classList.remove('show'); }
+
+    async function selectStock(code) {
+      document.getElementById('searchInput').value = '';
+      hideSearchResults();
+      switchView('stock');
+      await loadStockDetail(code);
+    }
+
+    // Refresh timer
+    function startRefreshTimer() {
+      refreshCountdown = 60;
+      updateTimerDisplay();
+      refreshInterval = setInterval(() => {
+        refreshCountdown--;
+        updateTimerDisplay();
+        if (refreshCountdown <= 0) {
+          loadMarket();
+          refreshCountdown = 60;
+        }
+      }, 1000);
+    }
+
+    function resetRefreshTimer() {
+      refreshCountdown = 60;
+      updateTimerDisplay();
+    }
+
+    function updateTimerDisplay() {
+      const el = document.getElementById('refreshTimer');
+      if (el) el.textContent = `${refreshCountdown}s`;
+    }
+
+    // Load Market
+    // Load Indices
+    async function loadIndices() {
+      const indices = [
+        { code: 'sh000001', id: 'idx-sh', chgId: 'idx-sh-chg' },
+        { code: '399001', id: 'idx-sz', chgId: 'idx-sz-chg' },
+        { code: '399006', id: 'idx-cy', chgId: 'idx-cy-chg' }
+      ];
+      
+      for (const idx of indices) {
+        try {
+          const data = await apiFetch(`/api/quote/${idx.code}`, `index_${idx.code}`, 30000);
+          const priceEl = document.getElementById(idx.id);
+          const chgEl = document.getElementById(idx.chgId);
+          
+          if (priceEl && data.price) {
+            priceEl.textContent = data.price.toFixed(2);
+            priceEl.style.color = chgColor(data.changePct);
+          }
+          if (chgEl && data.changePct !== undefined) {
+            const sign = data.changePct > 0 ? '+' : '';
+            chgEl.textContent = `${sign}${data.change.toFixed(2)} (${sign}${data.changePct.toFixed(2)}%)`;
+            chgEl.className = `hero-stat-sub ${chgClass(data.changePct)}`;
+          }
+        } catch (e) {
+          console.error(`Failed to load index ${idx.code}:`, e);
+        }
+      }
+    }
+
+    async function loadMarket() {
+      try {
+        const [stats, sentiment, sectors] = await Promise.all([
+          apiFetch('/api/market-stats', 'market_stats', 15000),
+          apiFetch('/api/market-sentiment', 'market_sentiment', 30000),
+          apiFetch('/api/hot-sectors', 'market_sectors', 30000)
+        ]);
+        
+        // Load indices
+        loadIndices();
+        
+        document.getElementById('upCount').textContent = stats.upCount.toLocaleString();
+        document.getElementById('downCount').textContent = stats.downCount.toLocaleString();
+        document.getElementById('limitUpBadge').textContent = `Limit ${stats.limitUpCount}`;
+        document.getElementById('limitDownBadge').textContent = `Limit ${stats.limitDownCount}`;
+        document.getElementById('totalAmount').textContent = fmtAmt(stats.totalAmount);
+        
+        document.getElementById('upCountBar').textContent = stats.upCount.toLocaleString();
+        document.getElementById('flatCountBar').textContent = stats.flatCount.toLocaleString();
+        document.getElementById('downCountBar').textContent = stats.downCount.toLocaleString();
+        
+        const total = stats.upCount + stats.downCount + stats.flatCount;
+        setTimeout(() => {
+          document.getElementById('upBar').style.width = `${(stats.upCount / total * 100)}%`;
+          document.getElementById('flatBar').style.width = `${(stats.flatCount / total * 100)}%`;
+          document.getElementById('downBar').style.width = `${(stats.downCount / total * 100)}%`;
+        }, 100);
+        
+        document.getElementById('sentimentScore').textContent = sentiment.score;
+        document.getElementById('sentimentLabel').textContent = sentiment.label;
+        const scoreEl = document.getElementById('sentimentScore');
+        if (sentiment.score >= 70) scoreEl.style.color = 'var(--accent-red)';
+        else if (sentiment.score >= 40) scoreEl.style.color = 'var(--accent-amber)';
+        else scoreEl.style.color = 'var(--accent-green)';
+        
+        renderSectorList('industryList', sectors.industries.slice(0, 15));
+        renderSectorList('conceptList', sectors.concepts.slice(0, 15));
+      } catch (e) {
+        console.error('Market load error:', e);
+        showError('industryList', 'Failed to load market data', 'loadMarket()');
+      }
+    }
+
+    function renderSectorList(containerId, items) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = items.map((s, i) => `
+        <div class="sector-row" onclick="loadSectorStocks('${s.name}', '${containerId.includes('industry') ? 'industry' : 'concept'}')">
+          <div class="sector-rank ${i < 3 ? 'top3' : ''}">${i + 1}</div>
+          <div class="sector-info">
+            <div class="sector-name">${s.name}</div>
+            <div class="sector-meta">${s.stockCount} stocks</div>
+          </div>
+          <span class="sector-change ${chgClass(s.avgChangePct)}">${s.avgChangePct > 0 ? '+' : ''}${s.avgChangePct.toFixed(2)}%</span>
+        </div>
+      `).join('');
+    }
+
+    // Load Leaders
+    async function loadLeaders() {
+      try {
+        const data = await apiFetch('/api/market-leaders', 'leaders', 15000);
+        
+        const renderRows = (items, extraCol) => items.slice(0, 30).map(s => `
+          <tr onclick="selectStock('${s.code}')">
+            <td>${favBtn(s.code, s.name)}</td>
+            <td class="code">${s.code}</td>
+            <td>${s.name}</td>
+            <td class="price">${s.price.toFixed(2)}</td>
+            <td class="change" style="color: ${chgColor(s.changePct)}">${s.changePct > 0 ? '+' : ''}${s.changePct.toFixed(2)}%</td>
+            ${extraCol === 'volume' ? `<td class="volume">${fmtNum(s.volume)}</td>` : ''}
+            <td class="volume">${fmtNum(s.amount)}</td>
+          </tr>
+        `).join('');
+        
+        document.getElementById('gainersBody').innerHTML = renderRows(data.gainers);
+        document.getElementById('losersBody').innerHTML = renderRows(data.losers);
+        document.getElementById('volumeBody').innerHTML = renderRows(data.volumeLeaders, 'volume');
+        document.getElementById('limitUpBody').innerHTML = data.limitUps.map(s => `
+          <tr onclick="selectStock('${s.code}')">
+            <td>${favBtn(s.code, s.name)}</td>
+            <td class="code">${s.code}</td>
+            <td>${s.name}</td>
+            <td class="price">${s.price.toFixed(2)}</td>
+            <td class="change" style="color: var(--accent-red)">+${s.changePct.toFixed(2)}%</td>
+            <td class="volume">${fmtNum(s.amount)}</td>
+          </tr>
+        `).join('');
+        document.getElementById('limitDownBody').innerHTML = data.limitDowns.map(s => `
+          <tr onclick="selectStock('${s.code}')">
+            <td>${favBtn(s.code, s.name)}</td>
+            <td class="code">${s.code}</td>
+            <td>${s.name}</td>
+            <td class="price">${s.price.toFixed(2)}</td>
+            <td class="change" style="color: var(--accent-green)">${s.changePct.toFixed(2)}%</td>
+            <td class="volume">${fmtNum(s.amount)}</td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        showError('gainersBody', 'Failed to load leaders', 'loadLeaders()');
+      }
+    }
+
+    // Load Sectors
+    async function loadAllSectors() {
+      try {
+        const data = await apiFetch('/api/hot-sectors', 'sectors', 30000);
+        
+        const renderList = (items, type) => items.map((s, i) => `
+          <div class="sector-row" onclick="loadSectorStocks('${s.name}', '${type}')">
+            <div class="sector-rank ${i < 3 ? 'top3' : ''}">${i + 1}</div>
+            <div class="sector-info">
+              <div class="sector-name">${s.name}</div>
+              <div class="sector-meta">${s.stockCount} stocks</div>
+            </div>
+            <span class="sector-change ${chgClass(s.avgChangePct)}">${s.avgChangePct > 0 ? '+' : ''}${s.avgChangePct.toFixed(2)}%</span>
+          </div>
+        `).join('');
+        
+        document.getElementById('allIndustries').innerHTML = renderList(data.industries, 'industry');
+        document.getElementById('allConcepts').innerHTML = renderList(data.concepts, 'concept');
+      } catch (e) {
+        showError('allIndustries', 'Failed to load sectors', 'loadAllSectors()');
+      }
+    }
+
+    async function loadSectorStocks(name, type) {
+      try {
+        const endpoint = type === 'industry' 
+          ? `/api/stocks-by-industry/${encodeURIComponent(name)}`
+          : `/api/stocks-by-concept/${encodeURIComponent(name)}`;
+        const data = await apiFetch(endpoint, `sector_${type}_${name}`, 30000);
+        
+        const container = type === 'industry' ? 'allIndustries' : 'allConcepts';
+        document.getElementById(container).innerHTML = `
+          <div class="back-btn" onclick="loadAllSectors()">Back to list</div>
+          <div style="font-size: 15px; font-weight: 600; margin-bottom: 14px;">${name} (${data.length})</div>
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th></th><th>Code</th><th>Name</th><th>Price</th><th>Change</th><th>Volume</th></tr></thead>
+              <tbody>
+                ${data.slice(0, 50).map(s => `
+                  <tr onclick="selectStock('${s.code}')">
+                    <td>${favBtn(s.code, s.name)}</td>
+                    <td class="code">${s.code}</td>
+                    <td>${s.name}</td>
+                    <td class="price">${s.price.toFixed(2)}</td>
+                    <td class="change" style="color: ${chgColor(s.changePct)}">${s.changePct > 0 ? '+' : ''}${s.changePct.toFixed(2)}%</td>
+                    <td class="volume">${fmtNum(s.amount)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      } catch (e) {
+        console.error('Sector stocks error:', e);
+      }
+    }
+
+    // Load Strategies
+    async function loadStrategies() {
+      try {
+        const data = await apiFetch('/api/strategies', 'strategies', 60000);
+        
+        document.getElementById('strategiesList').innerHTML = data.map(s => `
+          <div class="strategy-card" onclick="scanStrategy('${s.name}')">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span class="strategy-name">${s.name}</span>
+              ${s.isSuggested ? '<span class="strategy-badge suggested">Suggested</span>' : ''}
+            </div>
+            <div class="strategy-desc">${s.description}</div>
+            <div class="strategy-meta">
+              <span>Min ${s.minDays} days</span>
+              <span>Success: ${s.successRate}</span>
+              <span>Category: ${s.category}</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        showError('strategiesList', 'Failed to load strategies', 'loadStrategies()');
+      }
+    }
+
+    async function scanStrategy(name) {
+      try {
+        document.getElementById('strategyResultsCard').style.display = 'block';
+        document.getElementById('strategyResultsTitle').textContent = `Results: ${name}`;
+        document.getElementById('strategyResultsBody').innerHTML = '<tr><td colspan="7" class="loading"><div class="loading-spinner"></div><br>Scanning...</td></tr>';
+        
+        const data = await apiFetch(`/api/strategy/${encodeURIComponent(name)}`, `strategy_${name}`, 60000);
+        
+        if (data.length === 0) {
+          document.getElementById('strategyResultsBody').innerHTML = '<tr><td colspan="7" class="loading">No stocks matched</td></tr>';
+        } else {
+          document.getElementById('strategyResultsBody').innerHTML = data.map(s => `
+            <tr onclick="selectStock('${s.code}')">
+              <td>${favBtn(s.code, s.name)}</td>
+              <td class="code">${s.code}</td>
+              <td>${s.name}</td>
+              <td>${s.matchDate}</td>
+              <td class="price">${s.close.toFixed(2)}</td>
+              <td class="change" style="color: ${chgColor(s.changePct)}">${s.changePct > 0 ? '+' : ''}${s.changePct.toFixed(2)}%</td>
+              <td>${s.industry}</td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {
+        showError('strategyResultsBody', 'Failed to scan strategy');
+      }
+    }
+
+    // Load Reports
+    async function loadReports() {
+      try {
+        const data = await apiFetch('/api/external-reports', 'reports', 60000);
+        
+        document.getElementById('reportsList').innerHTML = data.map(r => `
+          <div class="report-item">
+            <div class="report-title">${r.title}</div>
+            <div class="report-meta">
+              <span>${r.source}</span>
+              <span>${new Date(r.publishedAt).toLocaleDateString('zh-CN')}</span>
+            </div>
+            ${r.summary ? `<div class="report-summary">${r.summary}</div>` : ''}
+            ${r.tags?.length ? `<div class="report-tags">${r.tags.map(t => `<span class="report-tag">${t}</span>`).join('')}</div>` : ''}
+          </div>
+        `).join('');
+      } catch (e) {
+        showError('reportsList', 'Failed to load reports', 'loadReports()');
+      }
+    }
+
+    async function pollReports() {
+      try {
+        delete dataCache['reports'];
+        await fetch(`${API_BASE}/api/external-reports/poll`, { method: 'POST' });
+        await loadReports();
+      } catch (e) {
+        console.error('Poll error:', e);
+      }
+    }
+
+    // Load AI
+    async function loadAI() {
+      try {
+        const data = await apiFetch('/api/market-analysis', 'ai', 120000);
+        document.getElementById('aiContent').innerHTML = (typeof data === 'string' ? data : JSON.stringify(data)).replace(/\n/g, '<br>');
+      } catch (e) {
+        showError('aiContent', 'Failed to load AI analysis', 'loadAI()');
+      }
+    }
+
+    // Load Favorites
+    async function loadFavorites() {
+      const favs = getFavorites();
+      const tbody = document.getElementById('favoritesBody');
+      const empty = document.getElementById('emptyFavorites');
+      
+      if (favs.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      
+      empty.style.display = 'none';
+      tbody.innerHTML = '<tr><td colspan="6" class="loading"><div class="loading-spinner"></div><br>Loading favorites...</td></tr>';
+      
+      try {
+        const quotes = await Promise.all(
+          favs.map(f => apiFetch(`/api/quote/${f.code}`, `quote_${f.code}`, 10000).catch(() => null))
+        );
+        
+        tbody.innerHTML = favs.map((f, i) => {
+          const q = quotes[i];
+          if (!q) return `
+            <tr>
+              <td><button class="fav-btn active" onclick="toggleFavorite('${f.code}', '${f.name}')">★</button></td>
+              <td class="code">${f.code}</td>
+              <td>${f.name}</td>
+              <td colspan="3" style="color: var(--text-muted)">Failed to load</td>
+            </tr>
+          `;
+          return `
+            <tr onclick="selectStock('${f.code}')">
+              <td><button class="fav-btn active" onclick="event.stopPropagation(); toggleFavorite('${f.code}', '${f.name}')">★</button></td>
+              <td class="code">${f.code}</td>
+              <td>${f.name}</td>
+              <td class="price">${q.price.toFixed(2)}</td>
+              <td class="change" style="color: ${chgColor(q.changePct)}">${q.changePct > 0 ? '+' : ''}${q.changePct.toFixed(2)}%</td>
+              <td><button class="btn btn-secondary" onclick="event.stopPropagation(); selectStock('${f.code}')">Detail</button></td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) {
+        showError('favoritesBody', 'Failed to load favorites');
+      }
+    }
+
+    // Load Stock Detail
+    async function loadStockDetail(code) {
+      const container = document.getElementById('stockDetailContent');
+      container.innerHTML = '<div class="loading"><div class="loading-spinner"></div><br>Loading...</div>';
+      
+      try {
+        const [quote, detail, kline] = await Promise.all([
+          apiFetch(`/api/quote/${code}`, `quote_${code}`, 10000),
+          apiFetch(`/api/detail/${code}`, `detail_${code}`, 30000),
+          apiFetch(`/api/kline/${code}`, `kline_${code}`, 60000)
+        ]);
+        
+        let research = null;
+        try {
+          research = await apiFetch(`/api/research/${code}`, `research_${code}`, 60000);
+        } catch {}
+        
+        container.innerHTML = `
+          <div class="stock-header">
+            <div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="stock-name">${detail.name}</div>
+                <button class="btn btn-secondary" onclick="toggleFavorite('${code}', '${detail.name}')">
+                  ${isFavorite(code) ? '★ Favorited' : '☆ Add to Favorites'}
+                </button>
+              </div>
+              <div class="stock-code">${detail.code} · ${detail.industry}</div>
+              <div class="stock-tags">
+                ${detail.concepts?.slice(0, 5).map(c => `<span class="stock-tag">${c}</span>`).join('') || ''}
+              </div>
+            </div>
+            <div class="stock-price-box">
+              <div class="stock-current-price" style="color: ${chgColor(quote.changePct)}">${quote.price.toFixed(2)}</div>
+              <div class="stock-change-info" style="color: ${chgColor(quote.changePct)}">
+                ${quote.changePct > 0 ? '+' : ''}${quote.change.toFixed(2)} (${quote.changePct > 0 ? '+' : ''}${quote.changePct.toFixed(2)}%)
+              </div>
+            </div>
+          </div>
+          
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-label">Open</div><div class="detail-value">${quote.open.toFixed(2)}</div></div>
+            <div class="detail-item"><div class="detail-label">High</div><div class="detail-value">${quote.high.toFixed(2)}</div></div>
+            <div class="detail-item"><div class="detail-label">Low</div><div class="detail-value">${quote.low.toFixed(2)}</div></div>
+            <div class="detail-item"><div class="detail-label">Prev Close</div><div class="detail-value">${detail.prevClose?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">Volume</div><div class="detail-value">${fmtNum(quote.volume)}</div></div>
+            <div class="detail-item"><div class="detail-label">Amount</div><div class="detail-value">${fmtNum(quote.amount)}</div></div>
+            <div class="detail-item"><div class="detail-label">Turnover</div><div class="detail-value">${detail.turnoverRate?.toFixed(2) || '--'}%</div></div>
+            <div class="detail-item"><div class="detail-label">Avg Price</div><div class="detail-value">${detail.avgPrice?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">Market Cap</div><div class="detail-value">${fmtNum(detail.marketCap)}</div></div>
+            <div class="detail-item"><div class="detail-label">Float Cap</div><div class="detail-value">${fmtNum(detail.floatMarketCap)}</div></div>
+            <div class="detail-item"><div class="detail-label">PE (TTM)</div><div class="detail-value">${detail.trailingPE?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">PE (Fwd)</div><div class="detail-value">${detail.forwardPE?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">PB</div><div class="detail-value">${detail.pbRatio?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">EPS</div><div class="detail-value">${detail.epsTtm?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">52W High</div><div class="detail-value">${detail.high52w?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">52W Low</div><div class="detail-value">${detail.low52w?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">MA20</div><div class="detail-value">${detail.ma20?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">MA60</div><div class="detail-value">${detail.ma60?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">BPS</div><div class="detail-value">${detail.bps?.toFixed(2) || '--'}</div></div>
+            <div class="detail-item"><div class="detail-label">Dividend</div><div class="detail-value">${detail.dividendYield?.toFixed(2) || '--'}%</div></div>
+          </div>
+          
+          <div class="card mb-18">
+            <div class="card-header"><span class="card-title">K-Line Chart</span></div>
+            <div class="card-body"><div class="chart-container" id="klineChart"></div></div>
+          </div>
+          
+          ${research ? renderResearch(research) : ''}
+        `;
+        
+        renderKlineChart(kline);
+      } catch (e) {
+        console.error('Stock detail error:', e);
+        container.innerHTML = `
+          <div class="error-state">
+            <div class="error-icon">!</div>
+            <div class="error-msg">Failed to load stock details</div>
+            <button class="btn btn-secondary" onclick="loadStockDetail('${code}')">Retry</button>
+          </div>
+        `;
+      }
+    }
+
+    function renderResearch(data) {
+      if (!data) return '';
+      
+      // Handle string response
+      if (typeof data === 'string') {
+        return `
+          <div class="card">
+            <div class="card-header"><span class="card-title">Research Summary</span></div>
+            <div class="card-body"><div class="ai-content">${data.replace(/\n/g, '<br>')}</div></div>
+          </div>
+        `;
+      }
+      
+      // Handle structured response
+      const summary = data.summary || '';
+      const reports = data.reports || [];
+      
+      return `
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Research Summary</span>
+            <span class="card-badge">${reports.length} Reports</span>
+          </div>
+          <div class="card-body">
+            ${summary ? `<div class="ai-content" style="margin-bottom: 20px; padding: 14px; background: var(--bg-glass); border-radius: 8px; border-left: 3px solid var(--accent-lime);">${summary}</div>` : ''}
+            ${reports.length > 0 ? `
+              <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.2px; color: var(--text-muted); margin-bottom: 12px;">Analyst Reports</div>
+              <div class="table-wrapper">
+                <table class="table" style="min-width: 600px;">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Org</th>
+                      <th>Date</th>
+                      <th>Rating</th>
+                      <th>EPS</th>
+                      <th>PE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${reports.map(r => `
+                      <tr>
+                        <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${r.title || ''}">${r.title || '--'}</td>
+                        <td>${r.orgName || '--'}</td>
+                        <td style="font-family: 'JetBrains Mono', monospace; font-size: 12px;">${r.publishDate ? new Date(r.publishDate).toLocaleDateString('zh-CN') : '--'}</td>
+                        <td><span class="strategy-badge ${r.rating === '买入' || r.rating === '增持' ? 'suggested' : ''}" style="font-size: 11px;">${r.rating || '--'}</span></td>
+                        <td class="price">${r.predictEps ? r.predictEps.toFixed(2) : '--'}</td>
+                        <td class="price">${r.predictPe ? r.predictPe.toFixed(2) : '--'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderKlineChart(data) {
+      const container = document.getElementById('klineChart');
+      if (!container || !data?.length) return;
+      
+      const chart = LightweightCharts.createChart(container, {
+        width: container.clientWidth,
+        height: container.clientHeight || 350,
+        layout: {
+          background: { type: 'solid', color: 'transparent' },
+          textColor: '#9ca3af',
+        },
+        grid: {
+          vertLines: { color: 'rgba(54, 45, 89, 0.5)' },
+          horzLines: { color: 'rgba(54, 45, 89, 0.5)' },
+        },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        rightPriceScale: { borderColor: 'rgba(54, 45, 89, 0.8)' },
+        timeScale: { borderColor: 'rgba(54, 45, 89, 0.8)', timeVisible: false },
+      });
+      
+      const candlestickSeries = chart.addCandlestickSeries({
+        upColor: '#ff4757',
+        downColor: '#2ed573',
+        borderUpColor: '#ff4757',
+        borderDownColor: '#2ed573',
+        wickUpColor: '#ff4757',
+        wickDownColor: '#2ed573',
+      });
+      
+      candlestickSeries.setData(data.map(d => ({
+        time: d.date, open: d.open, high: d.high, low: d.low, close: d.close,
+      })));
+      
+      chart.timeScale().fitContent();
+      
+      new ResizeObserver(() => {
+        chart.applyOptions({ width: container.clientWidth });
+      }).observe(container);
+    }
+
+    // Market status
+    async function loadMarketStatus() {
+      try {
+        const data = await apiFetch('/api/market-status', 'status', 30000);
+        const dot = document.getElementById('statusDot');
+        const text = document.getElementById('marketStatusText');
+        if (data.open) {
+          dot.classList.add('live');
+          text.textContent = `Trading · ${data.session}`;
+        } else {
+          dot.classList.remove('live');
+          text.textContent = 'Closed';
+        }
+      } catch (e) {
+        console.error('Status error:', e);
+      }
+    }
+
+    // Init
+    async function init() {
+      updateFavCount();
+      await Promise.all([loadMarketStatus(), loadMarket()]);
+      startRefreshTimer();
+    }
+
+    init();
+  </script>
+</body>
+</html>
