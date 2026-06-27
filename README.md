@@ -141,6 +141,35 @@ EXPOSE 80
 CMD ["python3", "proxy_server.py"]
 ```
 
+## AI Agent Skill
+
+这个项目包含一个 Hermes Agent skill，让 AI 可以直接调用 API 获取数据。
+
+### 安装 Skill
+
+```bash
+# 复制 skill 到 Hermes 目录
+mkdir -p ~/.hermes/skills
+cp skill/stockshub-api.md ~/.hermes/skills/stockshub-api/SKILL.md
+```
+
+### 使用 Skill
+
+```bash
+# 在 Hermes Agent 中加载
+skill_view(name='stockshub-api')
+
+# 然后 AI 就可以用 curl 获取数据
+curl "http://localhost/api/quote/sh000001"
+curl "http://localhost/api/search?q=茅台"
+```
+
+### 触发词
+
+股票、A股、行情、K线、涨跌、板块、研报、策略、大盘、指数
+
+详见 [skill/stockshub-api.md](skill/stockshub-api.md)
+
 ## Tech Stack
 
 - **Frontend**: Vanilla HTML/CSS/JS (no framework)
