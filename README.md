@@ -6,6 +6,12 @@ A-share market dashboard with real-time data, built with vanilla HTML/JS and Pyt
 ![SQLite](https://img.shields.io/badge/SQLite-3-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
+## Screenshots
+
+![Dashboard Overview](screenshots/dashboard-overview.png)
+
+![Market View](screenshots/dashboard-market.png)
+
 ## Features
 
 - **Real-time Indices** — 上证/深证/创业板 实时行情
