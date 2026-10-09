@@ -24,3 +24,11 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Personal state and generated artifacts
+local/
+site/
+.playwright-cli/
+test-results/
+node_modules/
+*.db-shm

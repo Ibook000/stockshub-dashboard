@@ -1,0 +1,66 @@
+name: Verify and deploy StocksHub
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # 09:23, 12:23, 16:23 Beijing time on weekdays; includes holidays.
+    - cron: '23 1,4,8 * * 1-5'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stockshub-pages-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: python -m unittest discover -s tests -p "test_*.py" -v
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: python scripts/build_site.py
+      - run: npx playwright test
+      - name: Build public market snapshot and site
+        if: github.event_name != 'pull_request'
+        run: python scripts/build_site.py --refresh
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+      - name: Upload public site only
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+    permissions:
+      contents: read
+      pages: read
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

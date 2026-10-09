@@ -1,195 +1,61 @@
 ---
-name: stockshub-api
-description: Query A-share market data via StocksHub API - stocks, quotes, kline, sectors, strategies, research
-triggers:
-  - stock
-  - A股
-  - 股票
-  - 行情
-  - K线
-  - 涨跌
-  - 板块
-  - 研报
-  - 策略
-  - 大盘
-  - 指数
+name: stockshub-research
+description: Read local A-share quotes, watchlists and research journals from StocksHub 2.0; preserve data provenance and observation time.
 ---
 
-# StocksHub API
+# StocksHub 2.0 本机 API
 
-Base URL: `http://localhost` (local proxy) or `https://stockshub.app` (direct)
+先启动 `python proxy_server.py`，默认地址 `http://127.0.0.1:8765`。这些接口只存在于本机版，GitHub Pages 版不提供远端 HTTP API；Pages 用户的数据保存在浏览器，需手动导出。
 
-## Quick Reference
+只在用户明确要求时写入、修改、归档或恢复其研究。市场数据只用于研究，不得把未知或缓存日期的数据描述为实时，不得虚构收益、补齐缺失数据或把涨跌当作研究假设已经验证。
 
-### Market Overview
+| 方法 | 路径 | 返回 / 用途 |
+|---|---|---|
+| GET | `/health` | 状态与版本 |
+| GET | `/api/search?q=茅台` | `{items, source, offline, warning?}`，仅 A 股 |
+| GET | `/api/quote/sh600519` | 带源时间的行情信封 |
+| GET | `/api/history/sh600519` | 未复权日线信封 |
+| GET / POST | `/api/watchlist` | `{items}` / 新增股票 |
+| DELETE | `/api/watchlist/sh600519` | 移除自选，保留相关研究 |
+| GET / POST | `/api/journals` | `{items}` / 创建研究 |
+| GET / PATCH | `/api/journals/{id}` | 查看 / 编辑并保留版本 |
+| POST | `/api/journals/{id}/reviews` | 追加复盘，不能覆盖既有复盘 |
+| GET | `/api/backup` | 完整个人 JSON 备份 |
+| POST | `/api/restore` | 验证后合并；相同研究 ID 跳过 |
 
-```bash
-# 大盘指数
-curl "http://localhost/api/quote/sh000001"  # 上证指数
-curl "http://localhost/api/quote/399001"    # 深证成指
-curl "http://localhost/api/quote/399006"    # 创业板指
+股票 ID 必须带市场，如 `sh600519`、`sz000001`、`bj920001`。`000001` 不唯一，不能猜测是股票还是指数。行情和日线支持 `?refresh=1` 强制重读。
 
-# 市场统计
-curl "http://localhost/api/market-stats"    # 涨跌家数、涨停跌停
-curl "http://localhost/api/market-sentiment" # 情绪分数
-curl "http://localhost/api/market-status"   # 开盘状态
+行情信封：
 
-# 排行榜
-curl "http://localhost/api/market-leaders"  # 涨幅榜、跌幅榜、成交量榜
-
-# 板块
-curl "http://localhost/api/hot-sectors"     # 热门行业和概念
-```
-
-### Stock Data
-
-```bash
-# 搜索股票
-curl "http://localhost/api/search?q=茅台"   # 按名称/代码/拼音搜索
-
-# 单股行情（实时）
-curl "http://localhost/api/quote/600519"    # 价格、涨跌幅、成交量
-
-# 股票详情（基本面）
-curl "http://localhost/api/detail/600519"   # 市值、PE、PB、EPS、行业、概念
-
-# K线数据
-curl "http://localhost/api/kline/600519"    # 日K线 OHLCV
-
-# 按行业/概念查股
-curl "http://localhost/api/stocks-by-industry/白酒"
-curl "http://localhost/api/stocks-by-concept/人工智能"
-```
-
-### Analysis
-
-```bash
-# 策略扫描
-curl "http://localhost/api/strategies"              # 策略列表
-curl "http://localhost/api/strategy/放量突破"        # 策略选股结果
-
-# 研报
-curl "http://localhost/api/research/600519"         # 个股研报摘要
-curl "http://localhost/api/external-reports"        # 外部研报聚合
-
-# AI分析
-curl "http://localhost/api/market-analysis"         # AI市场分析
-```
-
-## Response Formats
-
-### Quote (行情)
 ```json
 {
-  "code": "600519",
+  "symbol": "sh600519",
+  "source": "腾讯证券",
+  "as_of": "2026-10-08T15:00:00+08:00",
+  "fetched_at": "2026-10-08T07:01:00+00:00",
+  "cache_status": "fresh",
+  "data": {"price": 100.0, "change_pct": 1.0}
+}
+```
+
+上面只是格式示例，不是实际行情。`cache_status` 为 `fresh`、`cached` 或 `fallback`，指读取方式，不能保证数据的新鲜度；必须同时检查 `as_of`。日线有 `basis: "unadjusted"`，`data` 为 `{date,open,close,high,low,volume}` 数组。量为股，额与市值为元。缺失数字为 `null`。
+
+写入必须使用 `Content-Type: application/json`，最大 5 MB。本机服务不开放跨站 CORS。错误返回非 2xx 和 `{error}`。
+
+```json
+{
+  "symbol": "sh600519",
   "name": "贵州茅台",
-  "price": 1184.076,
-  "changePct": 0.3747,
-  "change": 4.43,
-  "volume": 12345678,
-  "amount": 1234567890,
-  "high": 1190.0,
-  "low": 1175.0,
-  "open": 1180.0,
-  "close": 1184.0
+  "title": "研究主题",
+  "thesis": "观察事实与研究理由",
+  "validation": "可以验证或证伪的条件",
+  "risk": "风险和相反证据",
+  "review_date": "2026-11-01"
 }
 ```
 
-### Detail (详情)
-```json
-{
-  "code": "600519",
-  "name": "贵州茅台",
-  "industry": "白酒",
-  "marketCap": 1500000000000,
-  "trailingPE": 15.91,
-  "pbRatio": 8.5,
-  "epsTtm": 74.5,
-  "dividendYield": 1.8,
-  "high52w": 1800.0,
-  "low52w": 1200.0,
-  "concepts": ["白酒", "消费", "MSCI"]
-}
-```
+创建会尝试读取行情并固定基准；无法读取仍保存，`baseline` 为 `null`。修改研究需要完整字段，不得更换股票；仅归档时 PATCH `{"archived":true}`，恢复用 `false`。
 
-### Market Stats (市场统计)
-```json
-{
-  "upCount": 2500,
-  "downCount": 2300,
-  "flatCount": 200,
-  "limitUpCount": 50,
-  "limitDownCount": 10,
-  "totalAmount": 1234567890000
-}
-```
+追加复盘：`{"verdict":"uncertain","conclusion":"具体复盘结论"}`。`verdict` 可为 `confirmed`、`rejected`、`uncertain`。价格变化只采用创建之后的未复权观察值，不含分红、费用，不代表交易收益。
 
-### Leaders (排行榜)
-```json
-{
-  "gainers": [{"code": "300650", "name": "太龙股份", "price": 14.86, "changePct": 20.03}],
-  "losers": [...],
-  "volumeLeaders": [...],
-  "limitUps": [...],
-  "limitDowns": [...]
-}
-```
-
-### Sectors (板块)
-```json
-{
-  "industries": [
-    {"name": "白酒", "stockCount": 20, "avgChangePct": 2.5}
-  ],
-  "concepts": [
-    {"name": "人工智能", "stockCount": 100, "avgChangePct": 1.8}
-  ]
-}
-```
-
-## Code Examples
-
-### Python
-```python
-import urllib.request
-import json
-
-def fetch_json(url):
-    req = urllib.request.Request(url)
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        return json.loads(resp.read())
-
-# 获取上证指数
-index = fetch_json("http://localhost/api/quote/sh000001")
-print(f"上证指数: {index['price']:.2f} {index['changePct']:+.2f}%")
-
-# 搜索股票
-results = fetch_json("http://localhost/api/search?q=茅台")
-for s in results:
-    print(f"{s['code']} {s['name']}")
-
-# 获取详情
-detail = fetch_json("http://localhost/api/detail/600519")
-print(f"PE: {detail['trailingPE']}, 市值: {detail['marketCap']/1e8:.0f}亿")
-```
-
-### curl One-liners
-```bash
-# 今日涨停股
-curl -s "http://localhost/api/market-leaders" | python3 -c "import sys,json; [print(f\"{s['code']} {s['name']} +{s['changePct']:.2f}%\") for s in json.load(sys.stdin)['limitUps']]"
-
-# 白酒板块股票
-curl -s "http://localhost/api/stocks-by-industry/白酒" | python3 -c "import sys,json; [print(f\"{s['code']} {s['name']}\") for s in json.load(sys.stdin)]"
-
-# 市场情绪
-curl -s "http://localhost/api/market-sentiment" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f\"情绪分数: {d['score']} ({d['label']})\")"
-```
-
-## Notes
-
-- **Local proxy** (`localhost`): Fast for search/details (SQLite cache), auto CORS
-- **Direct API** (`stockshub.app`): For external access, may have rate limits
-- **Rate limit**: ~10 req/s, 429 errors = wait 10s
-- **Data freshness**: Quotes/leaders = real-time, details = synced daily
-- **Database**: 2,042 A-share stocks, 1,840 with full details
-- **Service**: `systemctl status stockshub` (auto-restart on crash)
+不要调用旧版情绪、策略、研报或 AI 分析接口；2.0 已移除。所有代理适配文件以本文件为唯一 API 文档来源。
