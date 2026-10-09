@@ -254,13 +254,11 @@ test('backups migrate SQLite journals, versions and reviews into Pages', async (
   });
   const backup = await (await request.get('http://127.0.0.1:8767/api/backup')).json();
   await page.goto('./#data');
-  await page
-    .getByLabel('选择 StocksHub JSON 备份')
-    .setInputFiles({
-      name: 'sqlite-backup.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(JSON.stringify(backup)),
-    });
+  await page.getByLabel('选择 StocksHub JSON 备份').setInputFiles({
+    name: 'sqlite-backup.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(backup)),
+  });
   await expect(page.getByText(/已合并/)).toBeVisible();
   await page.goto(`./#journal/${entry.id}`);
   await expect(page.getByRole('heading', { name: entry.title, exact: true })).toBeVisible();
@@ -291,20 +289,18 @@ test('imported text stays text and keyboard skip link preserves the current rout
     archived: false,
   };
   await page.goto('./#data');
-  await page
-    .getByLabel('选择 StocksHub JSON 备份')
-    .setInputFiles({
-      name: 'safe-text.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(
-        JSON.stringify({
-          format: 'stockshub-backup',
-          version: 1,
-          watchlist: [],
-          journals: [entry],
-        }),
-      ),
-    });
+  await page.getByLabel('选择 StocksHub JSON 备份').setInputFiles({
+    name: 'safe-text.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        format: 'stockshub-backup',
+        version: 1,
+        watchlist: [],
+        journals: [entry],
+      }),
+    ),
+  });
   await expect(page.getByText(/已合并/)).toBeVisible();
   await page.goto(`./#journal/${id}`);
   await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
