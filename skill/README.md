@@ -1,54 +1,7 @@
-# StocksHub API - AI Agent Config
+# Agent 接入
 
-兼容多种 AI Agent 的配置文件。
+StocksHub 2.0 提供本机研究 API。统一文档：[stockshub-api.md](stockshub-api.md)。默认服务地址为 `http://127.0.0.1:8765`。
 
-## Hermes Agent
+Hermes 等支持技能目录的代理，可将 `stockshub-api.md` 复制到对应目录并命名为 `SKILL.md`；其他代理可直接读取该文件。不要把本项目的接入说明覆盖为你的全局代理配置。
 
-**文件**: `~/.hermes/skills/stockshub-api/SKILL.md`
-
-```bash
-mkdir -p ~/.hermes/skills/stockshub-api
-cp skill/stockshub-api.md ~/.hermes/skills/stockshub-api/SKILL.md
-```
-
-## Claude Code (CLAUDE.md)
-
-**文件**: 项目根目录 `CLAUDE.md`
-
-```bash
-cp skill/CLAUDE.md ./CLAUDE.md
-```
-
-## Codex (codex.md)
-
-**文件**: 项目根目录 `codex.md`
-
-```bash
-cp skill/codex.md ./codex.md
-```
-
-## OpenClaw
-
-**文件**: `.openclaw/skills/stockshub-api.md`
-
-```bash
-mkdir -p .openclaw/skills
-cp skill/stockshub-api.md .openclaw/skills/
-```
-
-## Cursor (.cursorrules)
-
-**文件**: 项目根目录 `.cursorrules`
-
-```bash
-cp skill/.cursorrules ./.cursorrules
-```
-
-## 通用 Markdown
-
-所有 AI Agent 都能读取的通用格式：
-
-```bash
-# 直接放在项目根目录
-cp skill/stockshub-api.md ./API.md
-```
+Pages 版只有浏览器本地数据，不提供这些 API。个人数据迁移使用网页上的 JSON 导出/导入。
