@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: stockshub-pages-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:

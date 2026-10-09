@@ -138,21 +138,17 @@ test('complete research workflow persists, versions, reviews and restores', asyn
   expect(
     backup.journals.find((e) => e.title === `财报研究 ${info.project.name}`).reviews,
   ).toHaveLength(1);
-  await page
-    .getByLabel('选择 StocksHub JSON 备份')
-    .setInputFiles({
-      name: 'backup.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(JSON.stringify(backup)),
-    });
+  await page.getByLabel('选择 StocksHub JSON 备份').setInputFiles({
+    name: 'backup.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(backup)),
+  });
   await expect(page.getByText(/已合并 0 只自选、0 篇研究/)).toBeVisible();
-  await page
-    .getByLabel('选择 StocksHub JSON 备份')
-    .setInputFiles({
-      name: 'bad.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from('{"not":"a backup"}'),
-    });
+  await page.getByLabel('选择 StocksHub JSON 备份').setInputFiles({
+    name: 'bad.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{"not":"a backup"}'),
+  });
   await expect(page.getByText(/未导入：/)).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -222,4 +218,101 @@ test('Pages works after a real offline reload and preserves edited research', as
   await page.getByRole('button', { name: '保存修改', exact: true }).click();
   await expect(page.getByText('断网后仍然能够编辑并保存。', { exact: true })).toBeVisible();
   await context.setOffline(false);
+});
+
+test('backups migrate SQLite journals, versions and reviews into Pages', async ({
+  page,
+  request,
+}, info) => {
+  test.skip(info.project.name !== 'pages', 'One cross-mode round trip is sufficient.');
+  const response = await request.post('http://127.0.0.1:8767/api/journals', {
+    data: {
+      symbol: 'sh600519',
+      name: '贵州茅台',
+      title: '跨模式完整迁移',
+      thesis: '本机创建的研究理由',
+      validation: '迁移后保留快照和历史版本',
+      risk: '',
+      review_date: '2099-01-01',
+    },
+  });
+  expect(response.ok()).toBeTruthy();
+  const entry = await response.json();
+  await request.patch(`http://127.0.0.1:8767/api/journals/${entry.id}`, {
+    data: {
+      symbol: entry.symbol,
+      name: entry.name,
+      title: entry.title,
+      thesis: '本机修改后的理由',
+      validation: entry.validation,
+      risk: '',
+      review_date: entry.review_date,
+    },
+  });
+  await request.post(`http://127.0.0.1:8767/api/journals/${entry.id}/reviews`, {
+    data: { verdict: 'uncertain', conclusion: '本机保存的复盘结论' },
+  });
+  const backup = await (await request.get('http://127.0.0.1:8767/api/backup')).json();
+  await page.goto('./#data');
+  await page
+    .getByLabel('选择 StocksHub JSON 备份')
+    .setInputFiles({
+      name: 'sqlite-backup.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(backup)),
+    });
+  await expect(page.getByText(/已合并/)).toBeVisible();
+  await page.goto(`./#journal/${entry.id}`);
+  await expect(page.getByRole('heading', { name: entry.title, exact: true })).toBeVisible();
+  await expect(page.getByText('历史修改版本 · 1 个', { exact: true })).toBeVisible();
+  await expect(page.getByText('本机保存的复盘结论', { exact: true })).toBeVisible();
+  await expect(page.locator('.quote-price')).toHaveText('100.00');
+});
+
+test('imported text stays text and keyboard skip link preserves the current route', async ({
+  page,
+}) => {
+  const id = 'safe-text-' + Date.now();
+  const title = '<img src=x onerror=window.hacked=true>';
+  const entry = {
+    id,
+    symbol: 'sh600519',
+    name: '贵州茅台',
+    title,
+    thesis: '<script>window.hacked=true</script>',
+    validation: '检查外部文本不会执行',
+    risk: '',
+    review_date: '2099-01-01',
+    created_at: '2020-01-01T00:00:00Z',
+    updated_at: '2020-01-01T00:00:00Z',
+    baseline: null,
+    reviews: [],
+    revisions: [],
+    archived: false,
+  };
+  await page.goto('./#data');
+  await page
+    .getByLabel('选择 StocksHub JSON 备份')
+    .setInputFiles({
+      name: 'safe-text.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({
+          format: 'stockshub-backup',
+          version: 1,
+          watchlist: [],
+          journals: [entry],
+        }),
+      ),
+    });
+  await expect(page.getByText(/已合并/)).toBeVisible();
+  await page.goto(`./#journal/${id}`);
+  await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+  await expect(page.locator('main img, main script')).toHaveCount(0);
+  expect(await page.evaluate(() => window.hacked)).toBeUndefined();
+  await page.locator('.skip-link').focus();
+  await page.locator('.skip-link').press('Enter');
+  await expect(page.locator('main')).toBeFocused();
+  await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+  expect(page.url()).toContain('#journal/');
 });
